@@ -1,21 +1,19 @@
-# Use the official Python image
 FROM python:3.11-slim
-
-# Set working directory
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 
-# Copy and install dependencies
+# Copy requirements first for caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Download spaCy English model (after installing spacy)
-RUN python -m spacy download en_core_web_sm
+# Force correct wheels and explicitly install python-multipart
+RUN python -m pip install --no-cache-dir --upgrade pip \
+ && python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch torchvision \
+ && python -m pip install --no-cache-dir python-multipart \
+ && python -m pip install --no-cache-dir -r requirements.txt \
+ && python -m spacy download en_core_web_sm
 
-# Copy app code
-COPY app ./app
+# Bring in the whole project (app/, scripts/, models/, etc.)
+COPY . .
 
-# Expose port (inside container)
 EXPOSE 5000
-
-# Run FastAPI with Uvicorn
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5000"]
